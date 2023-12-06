@@ -16,16 +16,21 @@
 # [START run_helloworld_service]
 import os
 
-from flask import Flask
+from flask import Flask, request
+
 
 app = Flask(__name__)
 
 
-@app.route("/")
-def hello_world():
-    """Example Hello World route."""
-    name = os.environ.get("NAME", "World")
-    return f"Hello {name}!"
+@app.route("/estudiantes", methods=["POST"])
+def login():
+    data = request.get_json()
+    nombre = data.get("nombre")
+    identificacion = data.get("identificacion")
+    edad = data.get("edad")
+    direccion = data.get("direccion")
+    print("objeto: {0}, {1}, {2}, {3}".format(nombre, identificacion, edad, direccion))
+    return ("succesfull", 201)
 
 
 if __name__ == "__main__":
