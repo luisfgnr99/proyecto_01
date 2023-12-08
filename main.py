@@ -14,11 +14,9 @@
 
 # [START cloudrun_helloworld_service]
 # [START run_helloworld_service]
-import os
-import mysql.connector
-
 from flask import Flask, request, jsonify
-
+import mysql.connector 
+import os
 
 app = Flask(__name__)
 
