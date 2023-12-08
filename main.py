@@ -15,22 +15,103 @@
 # [START cloudrun_helloworld_service]
 # [START run_helloworld_service]
 import os
+import mysql.connector
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 
 app = Flask(__name__)
 
+# credenciales de la base de datos
+db_config = {
+    'user': 'appestudiante',
+    'password': '1234abcd',
+    'host': '35.239.168.101',
+    'database': 'estudiantes',
+    'raise_on_warnings': True,
+}
+
+# if os.getenv("GAE_INSTANCE"):
+#     db.config["unix_socket"] = "cloudsql/tutorial-20231201:us-central1:estudiantesdb"
+
+conexion = mysql.connector.connect(**db_config)
+cursor = conexion.cursor()
+
 
 @app.route("/estudiantes", methods=["POST"])
-def login():
+def agregar_estudiante():
     data = request.get_json()
     nombre = data.get("nombre")
     identificacion = data.get("identificacion")
     edad = data.get("edad")
     direccion = data.get("direccion")
-    print("objeto: {0}, {1}, {2}, {3}".format(nombre, identificacion, edad, direccion))
-    return ("succesfull", 201)
+
+    consulta_insert = "INSERT INTO estudiantes (nombre, identificacion, edad, direccion) VALUES (%s, %s, %s, %s)"
+    cursor.execute(consulta_insert, (nombre, identificacion, edad, direccion))
+    conexion.commit()
+    return jsonify({"Estudiante agregado exitosamente"}), 201
+
+
+@app.route("/estudiantes", methods=["GET"])
+def obtener_estudiantes():
+    consulta_select = "SELECT * FROM estudiantes"
+    cursor.execute(consulta_select)
+    resultados = cursor.fetchall()
+
+    estudiantes = []
+    for resultado in resultados:
+        estudiante = {
+            "nombre" : resultado[1],
+            "identificacion" : resultado[2],
+            "edad" : resultado[3],
+            "direccion" : resultado[4]
+        }
+        estudiantes.append(estudiante)
+
+    return jsonify(estudiantes)
+
+@app.route("/estudiantes/<string:estudianteid>", methods=["GET"])
+def obtener_estudianteid(estudianteid):
+
+    consulta_select = "SELECT * FROM estudiantes WHERE identificacion = %s"
+    cursor.execute(consulta_select, (estudianteid,))
+    resultado = cursor.fetchone()
+
+    if resultado:
+        estudiante = {
+            "nombre" : resultado[1],
+            "identificacion" : resultado[2],
+            "edad" : resultado[3],
+            "direccion" : resultado[4]
+        }
+        return jsonify(estudiante), 200
+    else:
+        return jsonify({"Estudiante no encontrado"}), 404
+    
+    
+@app.route("/estudiantes/<string:estudianteid>", methods=["PUT"])
+def actualizar_estudiante(estudianteid):
+        
+        data = request.get_json()
+        nombre = data.get("nombre")
+        edad = data.get("edad")
+        direccion = data.get("direccion")
+
+        consulta_update = ("UPDATE estudiantes SET nombre = %s, edad = %s, direccion = %s WHERE identificacion = %s")
+        cursor.execute(consulta_update, (nombre, edad, direccion, estudianteid))
+        conexion.commit()
+
+        return jsonify({"Estudiante actualizado exitosamente"}), 200
+
+
+@app.route("/estudiantes/<string:estudianteid>", methods=["DELETE"])
+def eliminar_estudiante(estudianteid):
+
+    consulta_delete = "DELETE FROM estudiantes WHERE identificacion = %s"
+    cursor.execute(consulta_delete, (estudianteid,))
+    conexion.commit()
+
+    return jsonify({"Estudiante eliminado exitosamente"}), 204
 
 
 if __name__ == "__main__":
