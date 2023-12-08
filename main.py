@@ -49,7 +49,7 @@ def agregar_estudiante():
     consulta_insert = "INSERT INTO estudiantes (nombre, identificacion, edad, direccion) VALUES (%s, %s, %s, %s)"
     cursor.execute(consulta_insert, (nombre, identificacion, edad, direccion))
     conexion.commit()
-    return jsonify({"Estudiante agregado exitosamente"}), 201
+    return jsonify({"Mensaje" : "Estudiante agregado exitosamente"}), 201
 
 
 @app.route("/estudiantes", methods=["GET"])
@@ -86,7 +86,7 @@ def obtener_estudianteid(estudianteid):
         }
         return jsonify(estudiante), 200
     else:
-        return jsonify({"Estudiante no encontrado"}), 404
+        return jsonify({"Mensaje" : "Estudiante no encontrado"}), 404
     
     
 @app.route("/estudiantes/<string:estudianteid>", methods=["PUT"])
@@ -101,7 +101,7 @@ def actualizar_estudiante(estudianteid):
         cursor.execute(consulta_update, (nombre, edad, direccion, estudianteid))
         conexion.commit()
 
-        return jsonify({"Estudiante actualizado exitosamente"}), 200
+        return jsonify({"Mensaje" : "Estudiante actualizado exitosamente"}), 200
 
 
 @app.route("/estudiantes/<string:estudianteid>", methods=["DELETE"])
@@ -111,7 +111,7 @@ def eliminar_estudiante(estudianteid):
     cursor.execute(consulta_delete, (estudianteid,))
     conexion.commit()
 
-    return jsonify({"Estudiante eliminado exitosamente"}), 204
+    return jsonify({"Mensaje" : "Estudiante eliminado exitosamente"}), 204
 
 
 if __name__ == "__main__":
