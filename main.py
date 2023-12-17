@@ -15,101 +15,96 @@
 # [START cloudrun_helloworld_service]
 # [START run_helloworld_service]
 from flask import Flask, request, jsonify
-import mysql.connector 
+from estudianteDAO import EstudianteDAO, EstudianteDTO
+from database_config import get_database_config
 import os
+import mysql.connector.errors
+
 
 app = Flask(__name__)
 
-# credenciales de la base de datos
-db_config = {
-    'user': 'appestudiante',
-    'password': '1234abcd',
-    'host': '35.239.168.101',
-    'database': 'estudiantes',
-    'raise_on_warnings': True,
-}
+db_config = get_database_config()
 
-# if os.getenv("GAE_INSTANCE"):
-#     db.config["unix_socket"] = "cloudsql/tutorial-20231201:us-central1:estudiantesdb"
-
-conexion = mysql.connector.connect(**db_config)
-cursor = conexion.cursor()
+# instancia estudianteDAO
+estudiante_dao = EstudianteDAO(db_config)
 
 
 @app.route("/estudiantes", methods=["POST"])
 def agregar_estudiante():
-    data = request.get_json()
-    nombre = data.get("nombre")
-    identificacion = data.get("identificacion")
-    edad = data.get("edad")
-    direccion = data.get("direccion")
+    try:
+        data = request.get_json()
 
-    consulta_insert = "INSERT INTO estudiantes (nombre, identificacion, edad, direccion) VALUES (%s, %s, %s, %s)"
-    cursor.execute(consulta_insert, (nombre, identificacion, edad, direccion))
-    conexion.commit()
-    return jsonify({"Mensaje" : "Estudiante agregado exitosamente"}), 201
+        for est in data:
+            estudiante = EstudianteDTO(**est)
+            estudiante_dao.create(estudiante)
+        return jsonify({"Mensaje" : "Estudiante agregado exitosamente"}), 201
+    
+    except mysql.connector.errors.IntegrityError as error:
+        return jsonify({"Error": f"Error en la base de datos: {str(error)}"}), 400
+    except mysql.connector.errors.DatabaseError as error:
+        return jsonify({"Error": f"Error en la base de datos: {str(error)}"}), 400
+    except Exception as error:
+        return jsonify({"Error": f"Error en la base de datos: {str(error)}"}), 400
 
 
 @app.route("/estudiantes", methods=["GET"])
 def obtener_estudiantes():
-    consulta_select = "SELECT * FROM estudiantes"
-    cursor.execute(consulta_select)
-    resultados = cursor.fetchall()
+    try:
+        estudiantes = estudiante_dao.read_all()
+        if estudiantes:
+            estudiantes_json = []
+            for estudiante in estudiantes:
+                estudiantes_json.append(estudiante.__dict__)
 
-    estudiantes = []
-    for resultado in resultados:
-        estudiante = {
-            "nombre" : resultado[1],
-            "identificacion" : resultado[2],
-            "edad" : resultado[3],
-            "direccion" : resultado[4]
-        }
-        estudiantes.append(estudiante)
+            return jsonify(estudiantes_json)
+        else:
+            return jsonify({"Mensaje" : "No hay datos en la tabla"})
+    except Exception as e:
+        return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"})
 
-    return jsonify(estudiantes)
 
 @app.route("/estudiantes/<string:estudianteid>", methods=["GET"])
 def obtener_estudianteid(estudianteid):
+    try:
+        estudiante = estudiante_dao.read_by_id(estudianteid)
 
-    consulta_select = "SELECT * FROM estudiantes WHERE identificacion = %s"
-    cursor.execute(consulta_select, (estudianteid,))
-    resultado = cursor.fetchone()
-
-    if resultado:
-        estudiante = {
-            "nombre" : resultado[1],
-            "identificacion" : resultado[2],
-            "edad" : resultado[3],
-            "direccion" : resultado[4]
-        }
-        return jsonify(estudiante), 200
-    else:
-        return jsonify({"Mensaje" : "Estudiante no encontrado"}), 404
+        if estudiante:
+            return jsonify(estudiante.__dict__), 200
+        else:
+            return jsonify({"Mensaje" : "Estudiante no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"})
     
     
 @app.route("/estudiantes/<string:estudianteid>", methods=["PUT"])
 def actualizar_estudiante(estudianteid):
-        
-        data = request.get_json()
-        nombre = data.get("nombre")
-        edad = data.get("edad")
-        direccion = data.get("direccion")
-
-        consulta_update = ("UPDATE estudiantes SET nombre = %s, edad = %s, direccion = %s WHERE identificacion = %s")
-        cursor.execute(consulta_update, (nombre, edad, direccion, estudianteid))
-        conexion.commit()
-
-        return jsonify({"Mensaje" : "Estudiante actualizado exitosamente"}), 200
+        try:
+            data = request.get_json()
+            new_estudiante = EstudianteDTO(**data)
+            
+            if new_estudiante.identificacion == estudianteid:
+                update_status = estudiante_dao.update(estudianteid, new_estudiante)
+                if update_status:
+                    return jsonify({"Mensaje" : f"Estudiante actualizado exitosamente"}), 200
+                else:
+                    return jsonify({"Mensaje" : f"Estudiante no existe"})
+            else:
+                return jsonify({"Mensaje" : f"No coinciden los datos del estudiante con el id enviado"})
+        except Exception as e:
+            return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"})
 
 
 @app.route("/estudiantes/<string:estudianteid>", methods=["DELETE"])
 def eliminar_estudiante(estudianteid):
+    try:
+        deletion_status = estudiante_dao.delete(estudianteid)
 
-    consulta_delete = "DELETE FROM estudiantes WHERE identificacion = %s"
-    cursor.execute(consulta_delete, (estudianteid,))
-    conexion.commit()
-
-    return jsonify({"Mensaje" : "Estudiante eliminado exitosamente"}), 204
+        if deletion_status:
+            return jsonify({"Mensaje" : "Estudiante eliminado exitosamente"}), 204
+        else:
+            return jsonify({"Mensaje" : "Error al eliminar estudiante"}), 500
+    except Exception as e:
+            return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"})
 
 
 if __name__ == "__main__":
