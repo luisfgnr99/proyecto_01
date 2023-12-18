@@ -23,7 +23,7 @@ def get_database_config():
         client = secretmanager.SecretManagerServiceClient()
         name = f"projects/{project_id}/secrets/databaseaccess/versions/latest"
         response = client.access_secret_version(name=name)
-        db_config = json.loads(response.payload.data.decode("UTF-8"))
+        db_config = json.loads(response.payload.data.decode("UTF-8"), object_hook=custom_json_parser)
         print("_secret_")
     
     return db_config
