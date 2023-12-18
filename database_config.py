@@ -16,7 +16,7 @@ def get_database_config():
     db_config_json = os.environ.get('DATASOURCE')
     project_id = os.environ.get('_projectid_')
 
-    if db_config_json is not None or db_config_json != "":
+    if db_config_json is not None and db_config_json != "":
         db_config = json.loads(db_config_json, object_hook=custom_json_parser)
         print("_variable de entorno_")
     else:
