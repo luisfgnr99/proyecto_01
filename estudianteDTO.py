@@ -3,4 +3,4 @@ class EstudianteDTO:
         self.nombre = nombre
         self.identificacion = identificacion
         self.edad = edad
-        self.direccion =  direccion
+        self.direccion = direccion

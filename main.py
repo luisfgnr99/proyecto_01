@@ -16,17 +16,16 @@
 # [START run_helloworld_service]
 from flask import Flask, request, jsonify
 from estudianteDAO import EstudianteDAO, EstudianteDTO
-from database_config import get_database_config
+from database_config import create_engine_and_session
 import os
-import mysql.connector.errors
 
 
 app = Flask(__name__)
 
-db_config = get_database_config()
+engine, db_session = create_engine_and_session()
 
 # instancia estudianteDAO
-estudiante_dao = EstudianteDAO(db_config)
+estudiante_dao = EstudianteDAO(db_session)
 
 
 @app.route("/estudiantes", methods=["POST"])
@@ -38,11 +37,6 @@ def agregar_estudiante():
             estudiante = EstudianteDTO(**est)
             estudiante_dao.create(estudiante)
         return jsonify({"Mensaje" : "Estudiante agregado exitosamente"}), 201
-    
-    except mysql.connector.errors.IntegrityError as error:
-        return jsonify({"Error": f"Error en la base de datos: {str(error)}"}), 400
-    except mysql.connector.errors.DatabaseError as error:
-        return jsonify({"Error": f"Error en la base de datos: {str(error)}"}), 400
     except Exception as error:
         return jsonify({"Error": f"Error en la base de datos: {str(error)}"}), 400
 
@@ -58,9 +52,9 @@ def obtener_estudiantes():
 
             return jsonify(estudiantes_json)
         else:
-            return jsonify({"Mensaje" : "No hay datos en la tabla"})
+            return jsonify({"Mensaje" : "No hay datos en la tabla"}), 404
     except Exception as e:
-        return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"})
+        return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"}), 400
 
 
 @app.route("/estudiantes/<string:estudianteid>", methods=["GET"])
@@ -73,7 +67,7 @@ def obtener_estudianteid(estudianteid):
         else:
             return jsonify({"Mensaje" : "Estudiante no encontrado"}), 404
     except Exception as e:
-        return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"})
+        return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"}), 400
     
     
 @app.route("/estudiantes/<string:estudianteid>", methods=["PUT"])
@@ -87,11 +81,11 @@ def actualizar_estudiante(estudianteid):
                 if update_status:
                     return jsonify({"Mensaje" : f"Estudiante actualizado exitosamente"}), 200
                 else:
-                    return jsonify({"Mensaje" : f"Estudiante no existe"})
+                    return jsonify({"Mensaje" : f"Estudiante no existe"}), 404
             else:
-                return jsonify({"Mensaje" : f"No coinciden los datos del estudiante con el id enviado"})
+                return jsonify({"Mensaje" : f"No coinciden los datos del estudiante con el id enviado"}), 404
         except Exception as e:
-            return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"})
+            return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"}), 400
 
 
 @app.route("/estudiantes/<string:estudianteid>", methods=["DELETE"])
@@ -102,9 +96,9 @@ def eliminar_estudiante(estudianteid):
         if deletion_status:
             return jsonify({"Mensaje" : "Estudiante eliminado exitosamente"}), 204
         else:
-            return jsonify({"Mensaje" : "Error al eliminar estudiante"}), 500
+            return jsonify({"Mensaje" : "Error al eliminar estudiante. No existe"}), 500
     except Exception as e:
-            return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"})
+            return jsonify({"Mensaje" : f"Error en la base de datos: {str(e)}"}), 400
 
 
 if __name__ == "__main__":
